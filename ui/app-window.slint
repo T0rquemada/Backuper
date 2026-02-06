@@ -1,0 +1,73 @@
+import { Button, ScrollView } from "std-widgets.slint";
+
+component Btn inherits Button {
+    width: 150px;
+}
+
+// The new component to display the list of paths
+component Lis inherits VerticalLayout {
+    in property <[string]> items;
+    spacing: 4px;
+
+    // Use ScrollView so the list handles many files gracefully
+    ScrollView {
+        height: 100%;
+        viewport-height: (root.items.length * 25px);
+
+        VerticalLayout {
+            alignment: start;
+            for path in root.items : Text {
+                text: path;
+                color: green;
+                horizontal-alignment: center;
+                height: 25px; // Fixed height for calculation
+                overflow: elide;
+            }
+        }
+    }
+}
+
+export component MainWindow inherits Window {
+    default-font-family: "DejaVu Sans";
+    width: 800px;
+    height: 400px;
+
+    callback pick-file();
+    // New callback for the zip button
+    callback create-zip();
+
+    // Changed from <string> to <[string]> to hold multiple paths
+    in-out property <[string]> file-list: [];
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 10px;
+
+        Text {
+            text: "Selected Files:";
+            font-size: 16px;
+            horizontal-alignment: center;
+        }
+
+        // Using your new component, passing the model
+        Lis {
+            items: root.file-list;
+            height: 150px; // Give the list some fixed space
+        }
+
+        Btn {
+            text: "Add";
+            clicked => { root.pick-file(); }
+        }
+
+        Btn {
+            text: "Remove";
+            // Logic for remove would require passing an index back to Rust
+        }
+
+        Btn {
+            text: "Create .zip archive";
+            clicked => { root.create-zip(); }
+        }
+    }
+}
