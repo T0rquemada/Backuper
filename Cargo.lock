@@ -4380,6 +4380,8 @@ name = "slint-rust-template"
 version = "0.1.0"
 dependencies = [
  "rfd",
+ "serde",
+ "serde_json",
  "slint",
  "slint-build",
  "walkdir",

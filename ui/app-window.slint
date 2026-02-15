@@ -4,39 +4,53 @@ component Btn inherits Button {
     width: 150px;
 }
 
-// The new component to display the list of paths
 component Lis inherits VerticalLayout {
     in property <[string]> items;
+    // -1 means no selection
+    in-out property <int> selected-index: -1;
+
     spacing: 4px;
 
-    // Use ScrollView so the list handles many files gracefully
     ScrollView {
         height: 100%;
         viewport-height: (root.items.length * 25px);
 
         VerticalLayout {
             alignment: start;
-            for path in root.items : Text {
-                text: path;
-                color: green;
-                horizontal-alignment: center;
-                height: 25px; // Fixed height for calculation
-                overflow: elide;
+            for path[i] in root.items : Rectangle {
+                height: 25px;
+
+                // Visual Highlight Logic
+                background: root.selected-index == i ? #cccccc : transparent;
+
+                // Click handler for the row
+                TouchArea {
+                    clicked => {
+                        root.selected-index = i;
+                    }
+                }
+
+                Text {
+                    text: path;
+                    color: green;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
             }
         }
     }
 }
 
 export component MainWindow inherits Window {
-    default-font-family: "DejaVu Sans";
     width: 800px;
     height: 400px;
 
     callback pick-file();
-    // New callback for the zip button
     callback create-zip();
 
-    // Changed from <string> to <[string]> to hold multiple paths
+    callback remove-item(int);
+
     in-out property <[string]> file-list: [];
 
     VerticalLayout {
@@ -49,10 +63,10 @@ export component MainWindow inherits Window {
             horizontal-alignment: center;
         }
 
-        // Using your new component, passing the model
-        Lis {
+        // Give the list an ID (list-view) so we can read its 'selected-index'
+        list-view := Lis {
             items: root.file-list;
-            height: 150px; // Give the list some fixed space
+            height: 150px;
         }
 
         Btn {
@@ -62,7 +76,14 @@ export component MainWindow inherits Window {
 
         Btn {
             text: "Remove";
-            // Logic for remove would require passing an index back to Rust
+            // Disable button if nothing is selected (-1)
+            enabled: list-view.selected-index != -1;
+
+            clicked => {
+                root.remove-item(list-view.selected-index);
+                // Reset selection
+                list-view.selected-index = -1;
+            }
         }
 
         Btn {

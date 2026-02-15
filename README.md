@@ -9,10 +9,10 @@ GUI tool to create zip archive from selected files/directories for backups. Also
 ## ToDo:
 - [X] If selected directory, archive all nested files
 - [X] Handle adding two same paths
-- [ ] If archive exist, add +1 to title
-- [ ] Save selected paths even on exit
-- [ ] Make rows selectable, so user can remove selected from list
+- [X] Save selected paths even on exit
+- [X] Make rows selectable, so user can remove selected from list
 - [ ] Add fields to ignore some path
   - [ ] Hard coded
   - [ ] Dynamic
 - [ ] Add check row on existence while load list
+- [ ] Better UI

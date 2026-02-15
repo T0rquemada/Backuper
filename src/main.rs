@@ -4,8 +4,28 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
 use walkdir::WalkDir;
+use std::io::{BufReader, BufWriter};
 
 slint::include_modules!();
+
+const STATE_FILE: &str = "saved_paths.json";
+
+fn save_state(paths: &[String]) {
+    if let Ok(file) = File::create(STATE_FILE) {
+        let writer = BufWriter::new(file);
+        let _ = serde_json::to_writer(writer, paths);
+    }
+}
+
+fn load_state() -> Vec<String> {
+    if let Ok(file) = File::open(STATE_FILE) {
+        let reader = BufReader::new(file);
+        if let Ok(paths) = serde_json::from_reader(reader) {
+            return paths;
+        }
+    }
+    Vec::new()
+}
 
 fn make_zip(ui: &MainWindow, files_model: Rc<VecModel<SharedString>>, archive_name: &str) {
     let files_model_zip = files_model.clone();
@@ -120,21 +140,58 @@ fn file_picker(ui: &MainWindow, files_model: Rc<VecModel<SharedString>>, ui_hand
 
             files_model_add.push(path_str.into());
             println!("Added: {}", path.display());
+
+            let current_items: Vec<String> = (0..files_model_add.row_count())
+                .filter_map(|i| files_model_add.row_data(i).map(|s| s.to_string()))
+                .collect();
+
+            save_state(&current_items);
         }
     });
 }
 
-fn main() -> Result<(), slint::PlatformError> {
-    std::env::set_var("SLINT_BACKEND", "gl");
+fn remove_logic(ui: &MainWindow, files_model: Rc<VecModel<SharedString>>) {
+    let files_model_remove = files_model.clone();
 
+    ui.on_remove_item(move |index| {
+        // Validate index to prevent crashes
+        if index < 0 || index >= files_model_remove.row_count() as i32 {
+            return;
+        }
+
+        // Remove from the model
+        files_model_remove.remove(index as usize);
+
+        // Save the new state immediately
+        let current_items: Vec<String> = (0..files_model_remove.row_count())
+            .filter_map(|i| files_model_remove.row_data(i).map(|s| s.to_string()))
+            .collect();
+
+        save_state(&current_items);
+        println!("Removed item at index {}", index);
+    });
+}
+
+fn main() -> Result<(), slint::PlatformError> {
     let ui = MainWindow::new()?;
-    let files_model = Rc::new(VecModel::<SharedString>::from(vec![]));
+
+    // Load the saved paths
+    let saved_paths = load_state();
+
+    // Convert String -> SharedString
+    let shared_paths: Vec<SharedString> = saved_paths.into_iter().map(|s| s.into()).collect();
+
+    // Initialize the model with 'shared_paths'
+    let files_model = Rc::new(VecModel::<SharedString>::from(shared_paths));
+
     ui.set_file_list(ModelRc::from(files_model.clone()));
 
     let ui_handle = ui.as_weak();
 
     // File picker logic
     file_picker(&ui, files_model.clone(), ui_handle);
+
+    remove_logic(&ui, files_model.clone());
 
     // Zip
     let archive_name = "backup.zip";
